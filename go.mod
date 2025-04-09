@@ -1,4 +1,4 @@
-module bot
+module tg-bot-boilerplate
 
 go 1.23.5
 
