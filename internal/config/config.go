@@ -1,27 +1,21 @@
 package config
 
 import (
-	"log"
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/jessevdk/go-flags"
 )
 
 type Config struct {
-	BotToken string
+	BotToken string `long:"token" env:"BOT_TOKEN" required:"true" description:"telegram bot token"`
 }
 
-func Load() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, err
+func Load() (Config, error) {
+	var config Config
+	p := flags.NewParser(&config, flags.PassDoubleDash|flags.HelpFlag)
+	if _, err := p.Parse(); err != nil {
+		return Config{}, fmt.Errorf("parse: %v", err)
 	}
 
-	botToken, ok := os.LookupEnv("BOT_TOKEN")
-	if !ok {
-		log.Fatal("BOT_TOKEN is not set")
-	}
-
-	return &Config{
-		BotToken: botToken,
-	}, nil
+	return config, nil
 }
