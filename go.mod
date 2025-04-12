@@ -8,6 +8,4 @@ require (
 	gopkg.in/telebot.v4 v4.0.0-beta.4
 )
 
-replace (
-	//github.com/ulngollm/teleflow => ../teleflow
-)
+replace github.com/ulngollm/teleflow => ../teleflow

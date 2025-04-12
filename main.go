@@ -48,12 +48,17 @@ func run(token string) error {
 	newUserCtrl := feedback.New(flowManager)
 
 	ng := router.Group(feedback.FlowName)
-	ng.AddHandler(feedback.StateAskedCategory, newUserCtrl.AskProduct)
-	ng.AddHandler(feedback.StateAskedProduct, newUserCtrl.AskDetails)
-	ng.AddHandler(feedback.StateAskedDetails, newUserCtrl.AskScreenshot)
-	ng.AddHandler(feedback.StateAskedScreenshot, newUserCtrl.Thank)
+	//Куда удобнее направлние стейтов задавать все-таки снаружи
+	//иначк одна задача размывается по разным файлам, между ними приходится прынать и переключаться
+	ng.AddHandler(feedback.StateUndefined, feedback.StateAskedCategory, newUserCtrl.AskCategory)
+	ng.AddHandler(feedback.StateAskedCategory, feedback.StateAskedProduct, newUserCtrl.AskProduct)
+	ng.AddHandler(feedback.StateAskedProduct, feedback.StateAskedDetails, newUserCtrl.AskDetails)
+	ng.AddHandler(feedback.StateAskedDetails, feedback.StateAskedScreenshot, newUserCtrl.AskScreenshot)
+	ng.AddHandler(feedback.StateAskedScreenshot, feedback.StateComplete, newUserCtrl.Thank)
 
-	bot.Handle("/feedback", newUserCtrl.AskCategory, newUserCtrl.Init)
+	bot.Handle("/feedback", func(c tele.Context) error {
+		return bot.Trigger(tele.OnText, c)
+	}, newUserCtrl.Init)
 	bot.Handle(tele.OnText, handle, router.Middleware())
 
 	bot.Start()

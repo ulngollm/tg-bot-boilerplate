@@ -35,42 +35,38 @@ func (r *FlowController) AskCategory(c tele.Context) error {
 	inner := func(context tele.Context) error {
 		return c.Send("назовите категорию")
 	}
-	return r.buildHandler(c, inner, StateAskedCategory)(c)
+	return r.buildHandler(c, inner)(c)
 }
 
 func (r *FlowController) AskProduct(c tele.Context) error {
 	inner := func(context tele.Context) error {
 		return c.Send("назовите продукт")
 	}
-	return r.buildHandler(c, inner, StateAskedProduct)(c)
+	return r.buildHandler(c, inner)(c)
 }
 
 func (r *FlowController) AskDetails(c tele.Context) error {
 	inner := func(context tele.Context) error {
 		return c.Send("опишите, как воспроизвести ошибку")
 	}
-	return r.buildHandler(c, inner, StateAskedDetails)(c)
+	return r.buildHandler(c, inner)(c)
 }
 
 func (r *FlowController) AskScreenshot(c tele.Context) error {
 	inner := func(context tele.Context) error {
 		return c.Send("приложите скриншот")
 	}
-	return r.buildHandler(c, inner, StateAskedScreenshot)(c)
+	return r.buildHandler(c, inner)(c)
 }
 
 func (r *FlowController) Thank(c tele.Context) error {
 	inner := func(context tele.Context) error {
 		return c.Send("спасибо за обратную связь! мы передали ваше сообщение в поддержку")
 	}
-	return r.buildHandler(c, inner, StateComplete)(c)
+	return r.buildHandler(c, inner)(c)
 }
 
-func (r *FlowController) buildHandler(
-	c tele.Context,
-	inner tele.HandlerFunc,
-	stateTo string,
-) tele.HandlerFunc {
+func (r *FlowController) buildHandler(c tele.Context, inner tele.HandlerFunc) tele.HandlerFunc {
 	return func(context tele.Context) error {
 		flow := teleflow.GetCurrentFlow(c)
 		var d eventData
@@ -86,7 +82,6 @@ func (r *FlowController) buildHandler(
 		if err := inner(c); err != nil {
 			return fmt.Errorf("inner: %v", err)
 		}
-		flow.SetState(stateTo)
 		return nil
 	}
 }
