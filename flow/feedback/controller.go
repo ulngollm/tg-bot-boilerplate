@@ -2,7 +2,6 @@ package feedback
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/ulngollm/teleflow"
 	tele "gopkg.in/telebot.v4"
@@ -20,69 +19,74 @@ func New(manager *teleflow.FlowManager) *FlowController {
 	return &FlowController{manager: manager}
 }
 
-func (r *FlowController) Init(c tele.Context) error {
-	id := c.Sender().ID
-	flow := teleflow.NewSimpleFlow(id, StateUndefined, FlowName)
-	if err := r.manager.InitFlow(flow); err != nil {
-		return err
+func (r *FlowController) Init(next tele.HandlerFunc) tele.HandlerFunc {
+	return func(c tele.Context) error {
+		id := c.Sender().ID
+		flow := teleflow.NewSimpleFlow(id, StateUndefined, FlowName)
+		if err := r.manager.InitFlow(flow); err != nil {
+			return err
+		}
+		teleflow.SaveToCtx(c, flow)
+		return next(c)
 	}
-	teleflow.SaveToCtx(c, flow)
-	if err := c.Send("Выберите категорию вопроса"); err != nil {
-		return fmt.Errorf("send: %v", err)
+}
+
+func (r *FlowController) AskCategory(c tele.Context) error {
+	inner := func(context tele.Context) error {
+		return c.Send("назовите категорию")
 	}
-	return r.checkoutState(flow, StateAskedCategory)
+	return r.buildHandler(c, inner, StateAskedCategory)(c)
 }
 
 func (r *FlowController) AskProduct(c tele.Context) error {
-	flow := teleflow.GetCurrentFlow(c)
-	d := make(eventData)
-	d[StateAskedCategory] = c.Message().Text
-	flow.SetData(d)
-
-	if err := c.Send("назовите продукт"); err != nil {
-		return fmt.Errorf("send: %v", err)
+	inner := func(context tele.Context) error {
+		return c.Send("назовите продукт")
 	}
-	return r.checkoutState(flow, StateAskedProduct)
+	return r.buildHandler(c, inner, StateAskedProduct)(c)
 }
 
 func (r *FlowController) AskDetails(c tele.Context) error {
-	flow := teleflow.GetCurrentFlow(c)
-	d := flow.Data().(eventData)
-	d[StateAskedProduct] = c.Message().Text
-	flow.SetData(d)
-
-	if err := c.Send("опишите, как воспроизвести ошибку"); err != nil {
-		return fmt.Errorf("send: %v", err)
+	inner := func(context tele.Context) error {
+		return c.Send("опишите, как воспроизвести ошибку")
 	}
-	return r.checkoutState(flow, StateAskedDetails)
+	return r.buildHandler(c, inner, StateAskedDetails)(c)
 }
 
 func (r *FlowController) AskScreenshot(c tele.Context) error {
-	flow := teleflow.GetCurrentFlow(c)
-	d := flow.Data().(eventData)
-	d[StateAskedDetails] = c.Message().Text
-	flow.SetData(d)
-
-	if err := c.Send("приложите скриншот"); err != nil {
-		return fmt.Errorf("send: %v", err)
+	inner := func(context tele.Context) error {
+		return c.Send("приложите скриншот")
 	}
-	return r.checkoutState(flow, StateAskedScreenshot)
+	return r.buildHandler(c, inner, StateAskedScreenshot)(c)
 }
 
 func (r *FlowController) Thank(c tele.Context) error {
-	flow := teleflow.GetCurrentFlow(c)
-	d := flow.Data().(eventData)
-	d[StateAskedScreenshot] = c.Message().Text
-	flow.SetData(d)
-	log.Printf("%v", d)
-
-	if err := c.Send("спасибо за обратную связь! мы передали ваше сообщение в поддержку"); err != nil {
-		return fmt.Errorf("send: %v", err)
+	inner := func(context tele.Context) error {
+		return c.Send("спасибо за обратную связь! мы передали ваше сообщение в поддержку")
 	}
-	return r.checkoutState(flow, StateComplete)
+	return r.buildHandler(c, inner, StateComplete)(c)
 }
 
-func (r *FlowController) checkoutState(flow teleflow.Flow, state string) error {
-	flow.SetState(state)
-	return nil
+func (r *FlowController) buildHandler(
+	c tele.Context,
+	inner tele.HandlerFunc,
+	stateTo string,
+) tele.HandlerFunc {
+	return func(context tele.Context) error {
+		flow := teleflow.GetCurrentFlow(c)
+		var d eventData
+		if flow.Data() == nil {
+			d = make(eventData)
+		} else {
+			d = flow.Data().(eventData)
+		}
+		state := flow.State()
+		d[state] = c.Message().Text
+		flow.SetData(d)
+
+		if err := inner(c); err != nil {
+			return fmt.Errorf("inner: %v", err)
+		}
+		flow.SetState(stateTo)
+		return nil
+	}
 }

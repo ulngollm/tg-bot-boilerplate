@@ -7,3 +7,7 @@ require (
 	github.com/ulngollm/teleflow v0.0.0-20250412202749-60b36defcce1
 	gopkg.in/telebot.v4 v4.0.0-beta.4
 )
+
+replace (
+	//github.com/ulngollm/teleflow => ../teleflow
+)
