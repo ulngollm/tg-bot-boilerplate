@@ -6,35 +6,34 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/jessevdk/go-flags"
+
 	tele "gopkg.in/telebot.v4"
 )
 
-func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("godotenv.Load: %s", err)
-		return
-	}
+type options struct {
+	BotToken string `long:"token" env:"BOT_TOKEN" required:"true" description:"telegram bot token"`
+}
 
-	t, ok := os.LookupEnv("BOT_TOKEN")
-	if !ok {
-		log.Fatalf("bot token is empty")
-		return
+func main() {
+	var opts options
+	p := flags.NewParser(&opts, flags.PrintErrors|flags.PassDoubleDash|flags.HelpFlag)
+	if _, err := p.Parse(); err != nil {
+		os.Exit(1)
 	}
 
 	log.Println("bot started")
 
-	if err := run(t); err != nil {
+	if err := run(opts); err != nil {
 		log.Printf("run: %s", err)
 	}
 
 	log.Println("bot stopped")
 }
 
-func run(token string) error {
+func run(opts options) error {
 	pref := tele.Settings{
-		Token:  token,
+		Token:  opts.BotToken,
 		Poller: &tele.LongPoller{Timeout: time.Second},
 	}
 	bot, err := tele.NewBot(pref)
@@ -49,5 +48,5 @@ func run(token string) error {
 }
 
 func handle(c tele.Context) error {
-	return c.Send(c.Message())
+	return c.Send("Hello!")
 }
